@@ -283,16 +283,14 @@ async function doFetch(){
 
     document.getElementById("prog").style.width = "70%";
 
-    const minVol = parseFloat(document.getElementById("vol-min").value)||10;
     const rows = [];
 
     for(const item of result){
       const sym = String(item.symbol||"");
       if(sym.startsWith("P-")||sym.startsWith("C-")) continue;
       const vol     = parseFloat(item.volume||0)||0;
-      if(vol < minVol) continue;
       const price   = parseFloat(item.mark_price||0)||0;
-      const oi      = parseFloat(item.open_interest||0)||0;
+      const oi      = parseFloat(item.oi_value_usd||item.oi||0)||0;
       const funding = parseFloat(item.funding_rate||0)||0;
       rows.push({Symbol:sym, Price:price, Volume:vol,
         OpenInterest:oi, FundingRate:funding});
@@ -354,6 +352,7 @@ function getFiltered(){
   const sym     = document.getElementById("sym-search").value.trim().toUpperCase();
   const sigF    = document.getElementById("sig-filter").value;
   const minSc   = parseFloat(document.getElementById("score-min").value)||0;
+  const minVol  = parseFloat(document.getElementById("vol-min").value)||10;
 
   return allData.filter(r=>{
     if(activeTab==="long"    && r.Signal!=="LONG")    return false;
@@ -362,6 +361,7 @@ function getFiltered(){
     if(sym && !r.Symbol.includes(sym)) return false;
     if(sigF!=="ALL" && r.Signal!==sigF) return false;
     if(r.TotalScore < minSc) return false;
+    if(r.Volume < minVol) return false;
     return true;
   });
 }
@@ -391,6 +391,7 @@ function switchTab(tab){
   ["all","long","short","neutral"].forEach(t=>{
     document.getElementById("tab-"+t).className="tab"+(t===tab?" active":"");
   });
+  renderChart();
   renderTable();
 }
 
@@ -399,7 +400,7 @@ function switchTab(tab){
 // ═══════════════════════════════════════════════════════════
 function renderChart(){
   const top = parseInt(document.getElementById("chart-top").value)||20;
-  const data = allData.slice(0,top);
+  const data = getFiltered().slice(0,top);
   if(!data.length) return;
 
   const labels = data.map(r=>r.Symbol);
